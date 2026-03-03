@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(/c/Users/Asani/Desktop/Projects/notebooklm-clone/.gitignore:*)",
+      "Bash(docker compose:*)"
+    ]
+  }
+}
