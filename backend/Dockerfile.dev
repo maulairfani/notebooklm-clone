@@ -10,10 +10,10 @@ ENV UV_COMPILE_BYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 COPY pyproject.toml .
-RUN uv sync --no-install-project
+RUN uv sync --extra dev --no-install-project
 
 COPY . .
-RUN uv sync --no-install-project
+RUN uv sync --extra dev --no-install-project
 
 ENV PATH="/app/.venv/bin:$PATH"
 

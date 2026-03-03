@@ -6,13 +6,14 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+import app.models  # noqa: F401 — register all ORM models with Base.metadata
 from app.core.config import settings
 from app.core.database import Base
 
 # Alembic Config object
 config = context.config
 
-# Override sqlalchemy.url from settings
+# Offline mode uses sync psycopg2 URL; online mode uses async asyncpg URL
 config.set_main_option("sqlalchemy.url", settings.SYNC_DATABASE_URL)
 
 if config.config_file_name is not None:
@@ -41,7 +42,7 @@ def do_run_migrations(connection: Connection) -> None:
 
 async def run_async_migrations() -> None:
     connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        {**config.get_section(config.config_ini_section, {}), "sqlalchemy.url": settings.DATABASE_URL},
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
