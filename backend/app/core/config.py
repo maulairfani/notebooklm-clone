@@ -77,6 +77,10 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str = ""
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
 
+    # Google GenAI (Nano Banana + TTS)
+    GOOGLE_API_KEY: str = ""
+    VIDEO_TEMPLATE_PATH: str = "/app/static/template.pptx"
+
 
 @lru_cache
 def get_settings() -> Settings:

@@ -1,3 +1,9 @@
+import os
+
+# Provide defaults so app.models can be imported without a real .env file
+os.environ.setdefault("SECRET_KEY", "test-secret-key")
+os.environ.setdefault("POSTGRES_PASSWORD", "test")
+
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient

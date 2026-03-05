@@ -27,6 +27,10 @@ htmlcov/
 *.swp
 *.swo
 
+# Generated files
+tmp/
+backend/tmp/
+
 # Docker
 *.log
 
