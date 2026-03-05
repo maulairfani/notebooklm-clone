@@ -23,6 +23,7 @@ dependencies = [
     "langchain-groq>=0.3.0",
     "pymupdf>=1.25.0",
     "pgvector>=0.3.0",
+    "sentence-transformers>=3.0.0",
 ]
 
 [project.optional-dependencies]

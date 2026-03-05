@@ -25,6 +25,9 @@ def process_source(self, source_id: str) -> None:
             docs = processor.load(source.file_path)
 
             embeddings = get_embeddings()
+            # TODO: Consider switching to 1 collection per notebook (e.g. notebook_{notebook_id})
+            # with source_id in document metadata, instead of 1 collection per source.
+            # This would avoid looping queries across many collections in SearchSourcesTool.
             PGVector.from_documents(
                 documents=docs,
                 embedding=embeddings,
