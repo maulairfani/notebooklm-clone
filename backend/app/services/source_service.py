@@ -69,6 +69,8 @@ async def delete_source(
     user_id: uuid.UUID,
 ) -> None:
     source = await get_source(db, source_id, notebook_id, user_id)
+    # TODO(minor): `os.path.exists` + `os.remove` adalah blocking IO di async context.
+    # Ganti ke `await asyncio.to_thread(os.remove, source.file_path)` setelah cek exists.
     if source.file_path and os.path.exists(source.file_path):
         os.remove(source.file_path)
     await db.delete(source)

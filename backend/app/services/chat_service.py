@@ -1,5 +1,7 @@
 import uuid
 
+# TODO(bug): `create_agent` tidak ada di LangChain — ganti ke `create_tool_calling_agent`
+# dari `langchain.agents`, dan sesuaikan cara invoke-nya (pakai AgentExecutor atau LCEL chain)
 from langchain.agents import create_agent
 from langchain_core.callbacks import CallbackManagerForToolRun
 from langchain_core.messages import AIMessage, HumanMessage
@@ -24,6 +26,8 @@ class SearchSourcesTool(BaseTool):
         "Search through the uploaded documents for relevant information. "
         "Use this to answer questions based on the user's sources."
     )
+    # TODO(minor): mutable default list bisa menyebabkan state bleeding antar instance Pydantic.
+    # Ganti ke `stores: list[PGVector] = Field(default_factory=list)`
     stores: list[PGVector] = []
 
     def _run(
@@ -129,6 +133,9 @@ class ChatService:
             else:
                 history.append(AIMessage(content=msg.content))
 
+        # TODO(perf): `_run_agent` adalah blocking call (embedding + LLM inference) yang di-invoke
+        # langsung dari async context — ini nge-block seluruh event loop.
+        # Ganti ke: `response_text = await asyncio.to_thread(self._run_agent, sources, history, content)`
         # Run RAG agent
         response_text = self._run_agent(sources, history, content)
 
@@ -149,6 +156,8 @@ class ChatService:
     ) -> str:
         embeddings = get_embeddings()
 
+        # TODO(perf): PGVector store di-instantiate ulang tiap pesan — pertimbangkan caching
+        # per collection_name agar tidak buat koneksi baru setiap request.
         # Build vector stores for all source collections
         stores = []
         for source in sources:
@@ -161,6 +170,7 @@ class ChatService:
 
         search_tool = SearchSourcesTool(stores=stores)
 
+        # TODO(perf): ChatGroq di-instantiate ulang tiap pesan — jadikan singleton/module-level instance.
         # Init LLM
         llm = ChatGroq(
             api_key=settings.GROQ_API_KEY,
