@@ -33,9 +33,7 @@ async def create_video_endpoint(
         db,
         notebook_id=notebook_id,
         user_id=current_user.id,
-        title=body.title,
         language=body.language,
-        voice_name=body.voice_name,
     )
     generate_video.delay(str(video.id))
     return ApiResponse(

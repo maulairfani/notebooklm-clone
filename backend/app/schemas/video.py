@@ -5,9 +5,7 @@ from pydantic import BaseModel
 
 
 class VideoCreate(BaseModel):
-    title: str
     language: str = "id-ID"
-    voice_name: str | None = None
 
 
 class VideoResponse(BaseModel):

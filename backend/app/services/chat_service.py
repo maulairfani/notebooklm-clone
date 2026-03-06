@@ -1,12 +1,10 @@
 import uuid
 
-# TODO(bug): `create_agent` tidak ada di LangChain — ganti ke `create_tool_calling_agent`
-# dari `langchain.agents`, dan sesuaikan cara invoke-nya (pakai AgentExecutor atau LCEL chain)
 from langchain.agents import create_agent
 from langchain_core.callbacks import CallbackManagerForToolRun
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.tools import BaseTool
-from langchain_groq import ChatGroq
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_postgres import PGVector
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -170,11 +168,11 @@ class ChatService:
 
         search_tool = SearchSourcesTool(stores=stores)
 
-        # TODO(perf): ChatGroq di-instantiate ulang tiap pesan — jadikan singleton/module-level instance.
+        # TODO(perf): ChatGoogleGenerativeAI di-instantiate ulang tiap pesan — jadikan singleton/module-level instance.
         # Init LLM
-        llm = ChatGroq(
-            api_key=settings.GROQ_API_KEY,
-            model=settings.GROQ_MODEL,
+        llm = ChatGoogleGenerativeAI(
+            model="gemini-2.5-flash-lite",
+            google_api_key=settings.GEMINI_API_KEY,
             temperature=0,
         )
 
@@ -182,16 +180,16 @@ class ChatService:
         agent = create_agent(
             llm,
             tools=[search_tool],
-            prompt=(
-                "You are a helpful research assistant. Answer questions based on the provided sources. "
-                "Always use the search_sources tool to find relevant information before answering. "
-                "If the sources don't contain relevant information, say so clearly. "
-                "Cite information from the sources when possible."
-            ),
         )
 
         # Build messages and invoke
-        messages = history + [HumanMessage(content=query)]
+        system_prompt = (
+            "You are a helpful research assistant. Answer questions based on the provided sources. "
+            "Always use the search_sources tool to find relevant information before answering. "
+            "If the sources don't contain relevant information, say so clearly. "
+            "Cite information from the sources when possible."
+        ),
+        messages = [SystemMessage(content=system_prompt)] + history + [HumanMessage(content=query)]
         result = agent.invoke({"messages": messages})
 
         # Extract the final AI message

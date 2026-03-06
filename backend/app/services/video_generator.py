@@ -1,6 +1,6 @@
 """
 Video generation pipeline:
-  source content → slide JSON (Groq) → PPTX → PNG images (LibreOffice) →
+  source content → slide JSON (Gemini) → PPTX → PNG images (LibreOffice) →
   parallel [image decoration (Gemini) + TTS (Gemini)] → MP4 (moviepy)
 """
 from __future__ import annotations
@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, Union
 
 from google import genai
 from google.genai import types
-from langchain_groq import ChatGroq
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_postgres import PGVector
 from pptx import Presentation
 from pptx.util import Inches
@@ -144,10 +144,10 @@ class VideoGenerator:
         self.tmp_dir = os.path.join(output_dir, "tmp")
         os.makedirs(self.tmp_dir, exist_ok=True)
 
-        self._genai_client = genai.Client(api_key=settings.GOOGLE_API_KEY)
-        self._llm = ChatGroq(
-            api_key=settings.GROQ_API_KEY,
-            model=settings.GROQ_MODEL,
+        self._genai_client = genai.Client(api_key=settings.GEMINI_API_KEY)
+        self._llm = ChatGoogleGenerativeAI(
+            model="gemini-2.5-flash-lite",
+            google_api_key=settings.GEMINI_API_KEY,
             temperature=0.3,
         )
 

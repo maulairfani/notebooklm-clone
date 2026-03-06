@@ -19,8 +19,10 @@ services:
       - POSTGRES_DB=${POSTGRES_DB:-notebooklm}
       - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-production}
       - RABBITMQ_HOST=rabbitmq
-      - GROQ_API_KEY=${GROQ_API_KEY:-}
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - LANGCHAIN_TRACING_V2=${LANGCHAIN_TRACING_V2:-false}
+      - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY:-}
+      - LANGCHAIN_PROJECT=${LANGCHAIN_PROJECT:-notebooklm-clone}
     depends_on:
       db:
         condition: service_healthy
@@ -32,7 +34,7 @@ services:
   worker:
     build:
       context: ./backend
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile.worker.dev
     command: uv run celery -A app.workers.celery_app worker --loglevel=info --concurrency=2
     volumes:
       - ./backend:/app
@@ -48,8 +50,10 @@ services:
       - POSTGRES_DB=${POSTGRES_DB:-notebooklm}
       - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-production}
       - RABBITMQ_HOST=rabbitmq
-      - GROQ_API_KEY=${GROQ_API_KEY:-}
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - LANGCHAIN_TRACING_V2=${LANGCHAIN_TRACING_V2:-false}
+      - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY:-}
+      - LANGCHAIN_PROJECT=${LANGCHAIN_PROJECT:-notebooklm-clone}
     depends_on:
       db:
         condition: service_healthy
@@ -83,10 +87,10 @@ services:
       - "5672:5672"
     healthcheck:
       test: rabbitmq-diagnostics -q ping
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
+      interval: 15s
+      timeout: 15s
+      retries: 10
+      start_period: 90s
     networks:
       - app-network
 

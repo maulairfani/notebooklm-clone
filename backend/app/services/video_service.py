@@ -10,20 +10,22 @@ from app.models.notebook import Notebook
 from app.models.video import Video
 
 
+_DEFAULT_VOICE_NAME = "Kore"
+
+
 async def create_video(
     db: AsyncSession,
     notebook_id: uuid.UUID,
     user_id: uuid.UUID,
-    title: str,
     language: str,
-    voice_name: str | None,
 ) -> Video:
-    await _get_notebook(db, notebook_id, user_id)
+    notebook = await _get_notebook(db, notebook_id, user_id)
+    title = f"Video - {notebook.title}"
     video = Video(
         notebook_id=notebook_id,
         title=title,
         language=language,
-        voice_name=voice_name,
+        voice_name=_DEFAULT_VOICE_NAME,
         status="pending",
     )
     db.add(video)

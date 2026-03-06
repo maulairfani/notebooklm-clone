@@ -1,12 +1,15 @@
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 from app.core.config import settings
 
-_embeddings: HuggingFaceEmbeddings | None = None
+_embeddings: GoogleGenerativeAIEmbeddings | None = None
 
 
-def get_embeddings() -> HuggingFaceEmbeddings:
+def get_embeddings() -> GoogleGenerativeAIEmbeddings:
     global _embeddings
     if _embeddings is None:
-        _embeddings = HuggingFaceEmbeddings(model_name=settings.EMBEDDING_MODEL)
+        _embeddings = GoogleGenerativeAIEmbeddings(
+            model=settings.EMBEDDING_MODEL,
+            GEMINI_API_KEY=settings.GEMINI_API_KEY,
+        )
     return _embeddings

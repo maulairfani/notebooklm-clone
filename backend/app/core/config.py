@@ -71,16 +71,16 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = "/app/uploads"
 
     # Embedding
-    EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
-
-    # Groq (untuk Chat nanti)
-    GROQ_API_KEY: str = ""
-    GROQ_MODEL: str = "llama-3.3-70b-versatile"
+    EMBEDDING_MODEL: str = "models/gemini-embedding-001"
 
     # Google GenAI (Nano Banana + TTS)
-    GOOGLE_API_KEY: str = ""
+    GEMINI_API_KEY: str = ""
     VIDEO_TEMPLATE_PATH: str = "/app/static/template.pptx"
 
+    LANGSMITH_TRACING: str = "false"
+    LANGSMITH_ENDPOINT: str = "https://api.smith.langchain.com"
+    LANGSMITH_API_KEY: str = ""
+    LANGSMITH_PROJECT: str = "notebooklm-clone"
 
 @lru_cache
 def get_settings() -> Settings:

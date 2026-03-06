@@ -4,7 +4,9 @@
       "Bash(/c/Users/Asani/Desktop/Projects/notebooklm-clone/.gitignore:*)",
       "Bash(docker compose:*)",
       "WebSearch",
-      "WebFetch(domain:docs.langchain.com)"
+      "WebFetch(domain:docs.langchain.com)",
+      "WebFetch(domain:ai.google.dev)",
+      "WebFetch(domain:fal.ai)"
     ]
   }
 }
