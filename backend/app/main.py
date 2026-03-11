@@ -1,3 +1,4 @@
+import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -10,9 +11,19 @@ from app.core.config import settings
 from app.core.logging import setup_logging
 
 
+def _configure_langsmith() -> None:
+    """Ensure LangSmith env vars are set in os.environ (SDK reads them directly)."""
+    if settings.LANGSMITH_API_KEY:
+        os.environ.setdefault("LANGSMITH_TRACING", settings.LANGSMITH_TRACING)
+        os.environ.setdefault("LANGSMITH_API_KEY", settings.LANGSMITH_API_KEY)
+        os.environ.setdefault("LANGSMITH_ENDPOINT", settings.LANGSMITH_ENDPOINT)
+        os.environ.setdefault("LANGSMITH_PROJECT", settings.LANGSMITH_PROJECT)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     setup_logging()
+    _configure_langsmith()
     yield
 
 

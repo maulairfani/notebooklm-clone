@@ -49,7 +49,7 @@ def process_source(self, source_id: str) -> None:
             raise self.retry(exc=exc, countdown=60)
 
 
-@celery_app.task(bind=True, max_retries=3)
+@celery_app.task(bind=True, max_retries=1)
 def generate_video(self, video_id: str) -> None:
     with SyncSessionLocal() as db:
         video = db.get(Video, uuid.UUID(video_id))

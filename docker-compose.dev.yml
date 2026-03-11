@@ -20,9 +20,10 @@ services:
       - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-production}
       - RABBITMQ_HOST=rabbitmq
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
-      - LANGCHAIN_TRACING_V2=${LANGCHAIN_TRACING_V2:-false}
-      - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY:-}
-      - LANGCHAIN_PROJECT=${LANGCHAIN_PROJECT:-notebooklm-clone}
+      - LANGSMITH_TRACING=${LANGSMITH_TRACING:-false}
+      - LANGSMITH_API_KEY=${LANGSMITH_API_KEY:-}
+      - LANGSMITH_PROJECT=${LANGSMITH_PROJECT:-notebooklm-clone}
+      - LANGSMITH_ENDPOINT=${LANGSMITH_ENDPOINT:-https://api.smith.langchain.com}
     depends_on:
       db:
         condition: service_healthy
@@ -51,9 +52,10 @@ services:
       - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-production}
       - RABBITMQ_HOST=rabbitmq
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
-      - LANGCHAIN_TRACING_V2=${LANGCHAIN_TRACING_V2:-false}
-      - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY:-}
-      - LANGCHAIN_PROJECT=${LANGCHAIN_PROJECT:-notebooklm-clone}
+      - LANGSMITH_TRACING=${LANGSMITH_TRACING:-false}
+      - LANGSMITH_API_KEY=${LANGSMITH_API_KEY:-}
+      - LANGSMITH_PROJECT=${LANGSMITH_PROJECT:-notebooklm-clone}
+      - LANGSMITH_ENDPOINT=${LANGSMITH_ENDPOINT:-https://api.smith.langchain.com}
     depends_on:
       db:
         condition: service_healthy

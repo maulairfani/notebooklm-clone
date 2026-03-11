@@ -131,6 +131,37 @@ Available slide types and their JSON fields:
 - "picture_with_caption" : {"type", "title", "image_prompt", "caption", "speaker_notes"}
 """
 
+_VISUAL_STYLE_DESCRIPTIONS: dict[str, str] = {
+    "white_board": (
+        "whiteboard-style with hand-drawn line art, marker annotations, arrows, "
+        "and simple sketches on a white or off-white background"
+    ),
+    "kawaii": (
+        "cute Japanese kawaii style with rounded chibi characters, pastel colors, "
+        "sparkles, and adorable doodle decorations"
+    ),
+    "anime": (
+        "Japanese anime illustration style with bold outlines, vibrant colors, "
+        "expressive character art, and dynamic compositions"
+    ),
+    "water_color": (
+        "watercolor painting style with soft color washes, loose brushstrokes, "
+        "gentle gradients, and an artistic painted aesthetic"
+    ),
+    "retro_print": (
+        "vintage retro print / poster style with limited color palette, halftone "
+        "dot patterns, bold typography, and mid-century graphic design aesthetic"
+    ),
+    "heritage": (
+        "classic heritage illustration style with detailed engravings, vintage "
+        "botanical or cartographic motifs, and an aged, timeless quality"
+    ),
+    "paper_craft": (
+        "paper craft / paper cut-out style with layered paper shapes, visible "
+        "paper texture, shadow depth, and a tactile handmade appearance"
+    ),
+}
+
 
 # ------------------------------------------------------------------
 # Main generator class
@@ -158,6 +189,10 @@ class VideoGenerator:
 
         logger.info("Step 2: Generating slide content via LLM")
         slides = self._generate_slide_content(content)
+
+        if getattr(self.video, "test_mode", False):
+            logger.info("test_mode=True: truncating to 1 slide")
+            slides = slides[:1]
 
         logger.info("Step 3: Building PPTX")
         pptx_path = self._build_pptx(slides)
@@ -221,9 +256,19 @@ class VideoGenerator:
     # ------------------------------------------------------------------
 
     def _generate_slide_content(self, content: str) -> list[SlideData]:
+        structure = getattr(self.video, "structure", "comprehensive")
+        custom_prompt = getattr(self.video, "custom_prompt", None)
+
+        if structure == "bite_sized":
+            slide_count_instruction = "create a concise slide deck with 4-6 slides covering only the key highlights"
+        else:
+            slide_count_instruction = "create a comprehensive slide deck with 8-12 slides with thorough coverage"
+
+        extra_instruction = f"\n\nAdditional instruction from user: {custom_prompt}" if custom_prompt else ""
+
         prompt = (
-            "You are a presentation designer. Based on the following source content, "
-            "create a structured slide deck with 6-10 slides.\n\n"
+            f"You are a presentation designer. Based on the following source content, "
+            f"{slide_count_instruction}.\n\n"
             "Rules:\n"
             "- First slide MUST be type 'title_slide'\n"
             "- Last slide MUST be type 'section_header' or 'title_only' (as closing)\n"
@@ -235,6 +280,7 @@ class VideoGenerator:
             f"{_LLM_SCHEMA}\n"
             'Return ONLY a valid JSON object: {"slides": [...]}\n\n'
             f"SOURCE CONTENT:\n{content[:8000]}"
+            f"{extra_instruction}"
         )
 
         response = self._llm.invoke(prompt)
@@ -335,15 +381,18 @@ class VideoGenerator:
     # ------------------------------------------------------------------
 
     def _export_to_images(self, pptx_path: str) -> list[str]:
+        import fitz  # pymupdf
+
         images_dir = os.path.join(self.tmp_dir, "slides")
         os.makedirs(images_dir, exist_ok=True)
 
+        # Step 1: Convert PPTX → PDF (LibreOffice handles multi-slide reliably this way)
         result = subprocess.run(
             [
                 "soffice",
                 "--headless",
-                "--convert-to", "png",
-                "--outdir", images_dir,
+                "--convert-to", "pdf",
+                "--outdir", self.tmp_dir,
                 pptx_path,
             ],
             capture_output=True,
@@ -352,12 +401,24 @@ class VideoGenerator:
         )
 
         if result.returncode != 0:
-            raise RuntimeError(f"LibreOffice conversion failed: {result.stderr}")
+            raise RuntimeError(f"LibreOffice PDF conversion failed: {result.stderr}")
 
-        png_files = sorted(
-            f for f in os.listdir(images_dir) if f.lower().endswith(".png")
-        )
-        return [os.path.join(images_dir, f) for f in png_files]
+        pdf_path = os.path.join(self.tmp_dir, "presentation.pdf")
+        if not os.path.exists(pdf_path):
+            raise RuntimeError("LibreOffice did not produce a PDF file")
+
+        # Step 2: Convert each PDF page → individual PNG via PyMuPDF
+        doc = fitz.open(pdf_path)
+        image_paths: list[str] = []
+        for i, page in enumerate(doc):
+            mat = fitz.Matrix(2.0, 2.0)  # 2× scale for quality
+            pix = page.get_pixmap(matrix=mat)
+            img_path = os.path.join(images_dir, f"slide_{i:03d}.png")
+            pix.save(img_path)
+            image_paths.append(img_path)
+        doc.close()
+
+        return image_paths
 
     # ------------------------------------------------------------------
     # Step 5: Parallel image decoration + TTS
@@ -369,23 +430,31 @@ class VideoGenerator:
         decorated: list[str | None] = [None] * len(slides)
         audios: list[str | None] = [None] * len(slides)
 
+        should_decorate = getattr(self.video, "decorate_slides", True)
+
         with ThreadPoolExecutor(max_workers=4) as executor:
-            decor_futures = {
-                executor.submit(self._decorate_image, img_path, slides[i], i): i
-                for i, img_path in enumerate(image_paths)
-            }
+            if should_decorate:
+                decor_futures = {
+                    executor.submit(self._decorate_image, img_path, slides[i], i): i
+                    for i, img_path in enumerate(image_paths)
+                }
             tts_futures = {
                 executor.submit(self._generate_tts, slides[i].speaker_notes, i): i
                 for i in range(len(slides))
             }
 
-            for future in as_completed(decor_futures):
-                idx = decor_futures[future]
-                try:
-                    decorated[idx] = future.result()
-                except Exception as exc:
-                    logger.warning("Image decoration failed for slide %d: %s", idx, exc)
-                    decorated[idx] = image_paths[idx]
+            if should_decorate:
+                for future in as_completed(decor_futures):
+                    idx = decor_futures[future]
+                    try:
+                        decorated[idx] = future.result()
+                    except Exception as exc:
+                        logger.warning("Image decoration failed for slide %d: %s", idx, exc)
+                        decorated[idx] = image_paths[idx]
+            else:
+                logger.info("decorate_slides=False: skipping image decoration")
+                for i, img_path in enumerate(image_paths):
+                    decorated[i] = img_path
 
             for future in as_completed(tts_futures):
                 idx = tts_futures[future]
@@ -402,14 +471,17 @@ class VideoGenerator:
         if isinstance(slide, PictureWithCaptionSlide) and slide.image_prompt:
             return self._generate_picture_slide(img_path, slide, idx)
 
-        # All other slides: add handwritten-style annotations
+        # All other slides: add style-specific visual decorations
         with open(img_path, "rb") as f:
             image_bytes = f.read()
 
+        visual_style = getattr(self.video, "visual_style", "white_board")
+        style_description = _VISUAL_STYLE_DESCRIPTIONS.get(visual_style, _VISUAL_STYLE_DESCRIPTIONS["white_board"])
+
         prompt = (
-            "Add human-like handwritten annotations, arrows, and simple illustrations "
-            "to enhance this presentation slide. Keep the original text readable. "
-            "Add only light, helpful annotations that a teacher might draw on a whiteboard. "
+            f"Redraw and decorate this presentation slide in a {style_description} aesthetic. "
+            "Keep all original text readable and preserve the slide layout. "
+            "Enhance the visual appearance with style-appropriate decorations, illustrations, and embellishments. "
             f"The slide title is: {slide.title}"
         )
 
@@ -439,10 +511,14 @@ class VideoGenerator:
         """Generate an image from slide.image_prompt and composite it onto the slide PNG."""
         from PIL import Image as PILImage
 
-        # Generate image via Gemini
+        # Generate image via Gemini, styled by visual_style
+        visual_style = getattr(self.video, "visual_style", "white_board")
+        style_description = _VISUAL_STYLE_DESCRIPTIONS.get(visual_style, _VISUAL_STYLE_DESCRIPTIONS["white_board"])
+        styled_prompt = f"{slide.image_prompt}. Visual style: {style_description}."
+
         response = self._genai_client.models.generate_content(
             model="gemini-2.0-flash-preview-image-generation",
-            contents=slide.image_prompt,
+            contents=styled_prompt,
             config=types.GenerateContentConfig(
                 response_modalities=["IMAGE"],
             ),

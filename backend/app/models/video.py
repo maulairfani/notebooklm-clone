@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, Uuid, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -22,6 +22,11 @@ class Video(Base):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="pending")
     language: Mapped[str] = mapped_column(String(20), nullable=False, default="id-ID")
+    structure: Mapped[str] = mapped_column(String(50), nullable=False, default="comprehensive")
+    visual_style: Mapped[str] = mapped_column(String(50), nullable=False, default="white_board")
+    custom_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
+    test_mode: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    decorate_slides: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     voice_name: Mapped[str | None] = mapped_column(String(50), nullable=True)
     file_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)

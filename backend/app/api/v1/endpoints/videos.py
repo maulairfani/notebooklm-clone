@@ -34,6 +34,11 @@ async def create_video_endpoint(
         notebook_id=notebook_id,
         user_id=current_user.id,
         language=body.language,
+        structure=body.structure,
+        visual_style=body.visual_style,
+        custom_prompt=body.custom_prompt,
+        test_mode=body.test_mode,
+        decorate_slides=body.decorate_slides,
     )
     generate_video.delay(str(video.id))
     return ApiResponse(

@@ -9,7 +9,6 @@ from app.core.exceptions import NotFoundError
 from app.models.notebook import Notebook
 from app.models.video import Video
 
-
 _DEFAULT_VOICE_NAME = "Kore"
 
 
@@ -18,6 +17,11 @@ async def create_video(
     notebook_id: uuid.UUID,
     user_id: uuid.UUID,
     language: str,
+    structure: str = "comprehensive",
+    visual_style: str = "white_board",
+    custom_prompt: str | None = None,
+    test_mode: bool = False,
+    decorate_slides: bool = True,
 ) -> Video:
     notebook = await _get_notebook(db, notebook_id, user_id)
     title = f"Video - {notebook.title}"
@@ -25,6 +29,11 @@ async def create_video(
         notebook_id=notebook_id,
         title=title,
         language=language,
+        structure=structure,
+        visual_style=visual_style,
+        custom_prompt=custom_prompt,
+        test_mode=test_mode,
+        decorate_slides=decorate_slides,
         voice_name=_DEFAULT_VOICE_NAME,
         status="pending",
     )
