@@ -27,6 +27,10 @@ def process_source(self, source_id: str) -> None:
             processor = get_processor(source.source_type)
             docs = processor.load(source.file_path)
 
+            # Strip NUL bytes — PostgreSQL rejects strings containing \x00
+            for doc in docs:
+                doc.page_content = doc.page_content.replace("\x00", "")
+
             embeddings = get_embeddings()
             # TODO(perf): Saat ini 1 collection per source → SearchSourcesTool harus loop N queries
             # untuk N sources. Ganti ke 1 collection per notebook (`notebook_{notebook_id}`) dengan
