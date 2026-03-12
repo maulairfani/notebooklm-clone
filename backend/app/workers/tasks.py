@@ -6,8 +6,10 @@ from langchain_postgres import PGVector
 from app.core.config import settings
 from app.core.database import SyncSessionLocal
 from app.models.source import Source
+from app.models.podcast import Podcast
 from app.models.video import Video
 from app.services.embedding_service import get_embeddings
+from app.services.podcast_generator import PodcastGenerator
 from app.services.processors import get_processor
 from app.services.video_generator import VideoGenerator
 from app.workers.celery_app import celery_app
@@ -85,5 +87,41 @@ def generate_video(self, video_id: str) -> None:
         except Exception as exc:
             video.status = "failed"
             video.error_message = str(exc)
+            db.commit()
+            raise self.retry(exc=exc, countdown=60)
+
+
+@celery_app.task(bind=True, max_retries=1)
+def generate_podcast(self, podcast_id: str) -> None:
+    with SyncSessionLocal() as db:
+        podcast = db.get(Podcast, uuid.UUID(podcast_id))
+        if podcast is None:
+            return
+
+        podcast.status = "processing"
+        db.commit()
+
+        output_dir = os.path.join(
+            settings.UPLOAD_DIR,
+            "podcasts",
+            str(podcast.notebook_id),
+            podcast_id,
+        )
+        os.makedirs(output_dir, exist_ok=True)
+
+        try:
+            generator = PodcastGenerator(
+                podcast=podcast,
+                notebook_id=str(podcast.notebook_id),
+                output_dir=output_dir,
+            )
+            wav_path = generator.generate()
+
+            podcast.status = "ready"
+            podcast.file_path = wav_path
+            db.commit()
+        except Exception as exc:
+            podcast.status = "failed"
+            podcast.error_message = str(exc)
             db.commit()
             raise self.retry(exc=exc, countdown=60)
